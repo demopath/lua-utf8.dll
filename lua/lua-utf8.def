@@ -1,0 +1,4 @@
+LIBRARY lua-utf8.dll
+
+EXPORTS
+luaopen_utf8
