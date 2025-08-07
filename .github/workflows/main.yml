@@ -24,6 +24,7 @@ jobs:
           
       - name: Compile lua-utf8.dll
         run: |
+          mkdir lua
           gcc -shared -DLUA_BUILD_AS_DLL -I./lualib/include *.c ./lualib/liblua5.1.a -o ./lua/lua-utf8.dll
 
       - name: Commit 
