@@ -5,10 +5,11 @@ on:
   push:
     branches: [auto]
   schedule:
-    # Runs at 7:00 AM UTC every day
-    - cron: '0 7 * * *'
+    - cron: '0 7 * * *' # 7:00 
+
 jobs:
   build:
+    if: github.ref == 'refs/heads/auto'
     runs-on: windows-latest
     
     steps:
@@ -17,38 +18,24 @@ jobs:
 
       - name: Clone luautf8
         run: |
-          git clone https://github.com/starwing/luautf8.git
+          git clone --depth=1 https://github.com/starwing/luautf8
           copy luautf8\*.c .
           copy luautf8\*.h .
+          git diff --quiet *.c *.h
+          exit ($LASTEXITCODE -eq 0 ? 1 : 0)
           
-      - name: Download and unzip Lua binaries
-        run: |
-          Remove-Item -Recurse -Force lualib -ErrorAction SilentlyContinue
-          curl -L "https://sourceforge.net/projects/luabinaries/files/5.1.5/Windows%20Libraries/Dynamic/lua-5.1.5_Win64_dllw6_lib.zip/download" -o lualib.zip
-          unzip lualib.zip -d lualib
-          tree .  
-          if (!(Test-Path "lualib\include\lua.h")) { exit 1 }
-
       - name: Compile lua-utf8.dll
         run: |
-          Remove-Item -Recurse -Force lua -ErrorAction SilentlyContinue
           gcc -shared -DLUA_BUILD_AS_DLL -I./lualib/include *.c ./lualib/liblua5.1.a -o ./lua/lua-utf8.dll
-          if (!(Test-Path "lua")) { exit 1 }
 
-      - name: Get commit message from luautf8
-        id: luautf8_commit
-        run: |
-          $commit_message = git -C luautf8 log -1 --pretty=%B
-          echo "commit_message=$commit_message" >> $env:GITHUB_OUTPUT
-
-      - name: Commit and push changes
+      - name: Commit 
         run: |
           git config --global user.name  "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
-          git add *.c *.h lua lualib
-          if(git status --porcelain) {
-            git commit -m "Auto-commit from luautf8: ${{ steps.luautf8_commit.outputs.commit_message }}"
-            git push
-          } else {
-            echo "No changes to commit."
-          }
+          git add *.c *.h lua
+          $commit_message = git -C luautf8 log -1 --pretty=%B
+          git commit -m "Auto-commit: $commit_message"
+
+      - name: Push
+        run: git push        
+      
